@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
-from BOTS_2026.detector.branchseed import build_parser, read_nifti
+from detector.branchseed import build_parser, read_nifti, sitk
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,7 +70,10 @@ class SmokeTest(unittest.TestCase):
             volume = read_nifti(path, require_simpleitk=False)
             np.testing.assert_array_equal(volume.data, array)
             np.testing.assert_allclose(volume.spacing, [1.5, 2.0, 2.5])
-            np.testing.assert_allclose(volume.index_to_physical([1, 1, 1])[0], [11.5, -2.0, 10.5])
+            # SimpleITK reports physical points in LPS convention; the raw
+            # fallback parser reports the stored NIfTI RAS frame directly.
+            expected = [-11.5, 2.0, 10.5] if sitk is not None else [11.5, -2.0, 10.5]
+            np.testing.assert_allclose(volume.index_to_physical([1, 1, 1])[0], expected)
 
 
 if __name__ == "__main__":
