@@ -1,0 +1,28 @@
+{
+  "case_id": "synthetic_common_trunk",
+  "parent": {
+    "instance_id": "aorta"
+  },
+  "daughters": [
+    {
+      "instance_id": "branch_001",
+      "parent_instance_id": "aorta",
+      "ostium_xyz_mm": [
+        45.0,
+        36.0,
+        55.0
+      ],
+      "seed_xyz_mm": [
+        50.0,
+        36.0,
+        55.0
+      ],
+      "radius_mm": 2.64,
+      "direction_xyz": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    }
+  ]
+}

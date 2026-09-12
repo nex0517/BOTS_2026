@@ -1,0 +1,48 @@
+{
+  "case_id": "synthetic_close_origins",
+  "parent": {
+    "instance_id": "aorta"
+  },
+  "daughters": [
+    {
+      "instance_id": "branch_001",
+      "parent_instance_id": "aorta",
+      "ostium_xyz_mm": [
+        45.0,
+        36.0,
+        44.0
+      ],
+      "seed_xyz_mm": [
+        49.964,
+        35.4,
+        44.0
+      ],
+      "radius_mm": 1.606,
+      "direction_xyz": [
+        0.99277029,
+        -0.12002981,
+        -0.0
+      ]
+    },
+    {
+      "instance_id": "branch_002",
+      "parent_instance_id": "aorta",
+      "ostium_xyz_mm": [
+        45.0,
+        36.0,
+        50.0
+      ],
+      "seed_xyz_mm": [
+        49.944,
+        36.745,
+        50.0
+      ],
+      "radius_mm": 1.586,
+      "direction_xyz": [
+        0.98884389,
+        0.14895559,
+        0.0
+      ]
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#07141c" />
+  <meta name="description" content="Evidence-first visualization for aortic branch origin detection on CTA." />
+  <title>Branchseed Navigator</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2307141c'/%3E%3Cpath d='M15 5v22M15 11l9-4M15 18l10 3M15 23l-7 4' stroke='%235ce1e6' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='24' cy='7' r='3' fill='%23ff8a4c'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Branchseed Navigator home">
+      <span class="brand-mark" aria-hidden="true"><i></i><b></b><em></em></span>
+      <span>BRANCHSEED <strong>NAVIGATOR</strong></span>
+    </a>
+    <div class="case-toolbar">
+      <label for="caseSelect">Demo case</label>
+      <select id="caseSelect" aria-label="Choose a demo case">
+        <option value="low-contrast">Case 024 · low contrast</option>
+        <option value="close-origins">Case 011 · close origins</option>
+        <option value="common-trunk">Case 018 · common trunk</option>
+      </select>
+      <button class="button ghost" id="uploadBtn" type="button">Open JSON</button>
+      <input id="fileInput" type="file" accept="application/json,.json" hidden />
+      <button class="button primary" id="downloadBtn" type="button">Export prediction</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="status-strip" aria-label="Run summary">
+      <div><span class="eyebrow">Case</span><strong id="caseId">subject024</strong></div>
+      <div><span class="eyebrow">Direct branches</span><strong id="branchCount">6</strong></div>
+      <div><span class="eyebrow">Runtime</span><strong id="runtime">38.4 s</strong></div>
+      <div><span class="eyebrow">Peak memory</span><strong id="memory">1.26 GB</strong></div>
+      <div class="integrity"><span class="pulse"></span><span><span class="eyebrow">Output integrity</span><strong>10 / 10 checks</strong></span></div>
+      <div class="synthetic-flag">SYNTHETIC DEMO · NOT FOR CLINICAL USE</div>
+    </section>
+
+    <section class="workspace-grid">
+      <article class="panel map-panel">
+        <div class="panel-head">
+          <div>
+            <span class="kicker">01 · ORIGIN OVERVIEW</span>
+            <h1>Aorta Map</h1>
+          </div>
+          <div class="legend" aria-label="Confidence legend"><span class="high"></span>High <span class="medium"></span>Review</div>
+        </div>
+        <p class="panel-intro">The aorta is unwrapped into a flat surface. Each numbered point is one direct wall opening—not an anatomy guess.</p>
+        <div class="map-wrap">
+          <div class="y-label">Distance from superior cap · mm</div>
+          <svg id="aortaMap" class="aorta-map" viewBox="0 0 640 390" role="img" aria-label="Unwrapped aorta map with clickable detected branch origins">
+            <defs>
+              <linearGradient id="scanBand" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#173746"/><stop offset="1" stop-color="#0a222e"/></linearGradient>
+              <pattern id="grid" width="64" height="65" patternUnits="userSpaceOnUse"><path d="M64 0H0V65" fill="none" stroke="#294451" stroke-width="1"/></pattern>
+            </defs>
+            <rect x="64" y="16" width="560" height="330" rx="8" fill="url(#scanBand)"/>
+            <rect x="64" y="16" width="560" height="330" rx="8" fill="url(#grid)"/>
+            <g class="cap-zone"><rect x="64" y="16" width="560" height="28" rx="7"/><text x="78" y="35">CAP EXCLUSION</text></g>
+            <g class="cap-zone"><rect x="64" y="318" width="560" height="28" rx="7"/><text x="78" y="338">CAP EXCLUSION</text></g>
+            <g class="axis-labels" aria-hidden="true">
+              <text x="52" y="55">0</text><text x="42" y="120">40</text><text x="42" y="185">80</text><text x="35" y="250">120</text><text x="35" y="315">160</text>
+              <text x="64" y="372">−180°</text><text x="333" y="372" text-anchor="middle">0° anterior</text><text x="624" y="372" text-anchor="end">+180°</text>
+            </g>
+            <g id="mapDots"></g>
+          </svg>
+          <div class="map-note"><span></span>Point size = radius · halo = threshold uncertainty</div>
+        </div>
+      </article>
+
+      <article class="panel model-panel">
+        <div class="panel-head">
+          <div><span class="kicker">02 · SPATIAL CONTEXT</span><h2>Proximal geometry</h2></div>
+          <button class="icon-button" id="animateBtn" type="button" aria-label="Animate selected branch path"><span>▶</span> Trace 0–10 mm</button>
+        </div>
+        <div class="model-stage" aria-label="Schematic translucent aorta and detected proximal branch stubs">
+          <svg id="modelSvg" viewBox="0 0 480 440" role="img">
+            <defs>
+              <linearGradient id="aortaBody" x1="0" x2="1"><stop offset="0" stop-color="#224a5a" stop-opacity=".56"/><stop offset=".46" stop-color="#70dbe0" stop-opacity=".18"/><stop offset="1" stop-color="#0b2935" stop-opacity=".8"/></linearGradient>
+              <filter id="glow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <ellipse cx="244" cy="54" rx="60" ry="18" class="aorta-top"/>
+            <path d="M184 54 C181 143 195 200 188 292 C184 350 205 397 245 415 C287 395 302 349 296 287 C287 199 304 145 304 54 Z" class="aorta-body"/>
+            <path d="M184 54 C183 141 193 201 188 292 C184 352 206 396 245 415" class="aorta-edge"/>
+            <g id="modelBranches"></g>
+            <g class="orientation"><text x="22" y="30">A</text><text x="446" y="30">P</text><path d="M45 26h38"/><path d="m78 21 8 5-8 5"/></g>
+          </svg>
+          <div class="model-readout"><span id="selectedId">branch_001</span><strong id="selectedPath">5.0 mm proven</strong></div>
+        </div>
+      </article>
+
+      <article class="panel evidence-panel">
+        <div class="panel-head">
+          <div><span class="kicker">03 · MACHINE EVIDENCE</span><h2 id="branchTitle">Branch 001</h2></div>
+          <div class="confidence-badge" id="confidenceBadge"><span></span><strong>94%</strong> high</div>
+        </div>
+        <div class="slice-grid">
+          <figure><canvas id="axial" width="260" height="210"></canvas><figcaption>AXIAL <span id="axialZ">z 202.5 mm</span></figcaption></figure>
+          <figure><canvas id="coronal" width="260" height="210"></canvas><figcaption>CORONAL <span>linked crosshair</span></figcaption></figure>
+          <figure><canvas id="sagittal" width="260" height="210"></canvas><figcaption>SAGITTAL <span>linked crosshair</span></figcaption></figure>
+          <figure><canvas id="radiusPlane" width="260" height="210"></canvas><figcaption>5 MM RADIUS PLANE <span id="radiusLabel">r 2.4 mm</span></figcaption></figure>
+        </div>
+        <div class="evidence-footer">
+          <div class="metric"><span>OSTIUM XYZ · MM</span><code id="ostium">−11.2, 43.8, 202.5</code></div>
+          <div class="metric"><span>SEED XYZ · MM</span><code id="seed">−6.7, 45.4, 201.1</code></div>
+          <div class="metric"><span>DIRECTION</span><code id="direction">+0.918, +0.326, −0.228</code></div>
+        </div>
+      </article>
+
+      <aside class="panel branch-panel">
+        <div class="panel-head compact">
+          <div><span class="kicker">04 · INSTANCE LIST</span><h2>Direct branches</h2></div>
+          <button class="icon-only" id="jsonBtn" type="button" title="View scorer JSON" aria-label="View scorer JSON">{ }</button>
+        </div>
+        <div class="search-row"><label class="sr-only" for="branchSearch">Filter branches</label><input id="branchSearch" type="search" placeholder="Filter branch ID…"/><span id="visibleCount">6 shown</span></div>
+        <div id="branchList" class="branch-list" role="list"></div>
+        <div class="logic-card">
+          <span class="logic-icon">⌁</span>
+          <div><strong id="logicTitle">Deduplication passed</strong><p id="logicText">No competing path shares this wall-opening component.</p></div>
+        </div>
+      </aside>
+
+      <article class="panel score-panel">
+        <div class="panel-head compact"><div><span class="kicker">05 · WHY THE MODEL TRUSTS IT</span><h2>Evidence stack</h2></div></div>
+        <div id="scoreBars" class="score-bars"></div>
+        <div class="threshold-row"><span>Acceptance threshold</span><div class="threshold-track"><i></i><b id="thresholdMarker"></b></div><strong>0.68</strong></div>
+      </article>
+
+      <article class="panel pipeline-panel">
+        <div class="panel-head compact"><div><span class="kicker">06 · CPU-FIRST PIPELINE</span><h2>One auditable path</h2></div></div>
+        <ol class="pipeline" aria-label="Eight stage inference pipeline">
+          <li><span>01</span><strong>Validate</strong><small>CT + mask grid</small></li>
+          <li><span>02</span><strong>Crop</strong><small>25 mm ROI</small></li>
+          <li><span>03</span><strong>Calibrate</strong><small>per-case contrast</small></li>
+          <li class="hot"><span>04</span><strong>Propose</strong><small>wall openings</small></li>
+          <li class="hot"><span>05</span><strong>Track</strong><small>prove ≥ 5 mm</small></li>
+          <li class="hot"><span>06</span><strong>Deduplicate</strong><small>opening graph</small></li>
+          <li><span>07</span><strong>Measure</strong><small>seed + radius</small></li>
+          <li><span>08</span><strong>Serialize</strong><small>strict JSON</small></li>
+        </ol>
+      </article>
+    </section>
+  </main>
+
+  <dialog id="jsonDialog">
+    <div class="dialog-head"><div><span class="kicker">SCORER-SAFE OUTPUT</span><h2>prediction.json</h2></div><button id="closeDialog" class="icon-only" type="button" aria-label="Close JSON dialog">×</button></div>
+    <pre id="jsonOutput"></pre>
+    <p>Diagnostics, confidence and visuals stay outside this file.</p>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

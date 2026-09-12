@@ -1,0 +1,28 @@
+{
+  "case_id": "synthetic_downstream_branch",
+  "parent": {
+    "instance_id": "aorta"
+  },
+  "daughters": [
+    {
+      "instance_id": "branch_001",
+      "parent_instance_id": "aorta",
+      "ostium_xyz_mm": [
+        45.0,
+        36.0,
+        55.0
+      ],
+      "seed_xyz_mm": [
+        49.992,
+        36.266,
+        55.073
+      ],
+      "radius_mm": 2.498,
+      "direction_xyz": [
+        0.99847552,
+        0.05321842,
+        0.0146438
+      ]
+    }
+  ]
+}

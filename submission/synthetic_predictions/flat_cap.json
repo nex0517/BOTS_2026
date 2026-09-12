@@ -1,0 +1,7 @@
+{
+  "case_id": "synthetic_flat_cap",
+  "parent": {
+    "instance_id": "aorta"
+  },
+  "daughters": []
+}

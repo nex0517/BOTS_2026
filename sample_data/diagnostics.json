@@ -1,0 +1,76 @@
+{
+  "pipeline": "adaptive-shell-baseline",
+  "physical_transform_backend": "synthetic-or-test-affine",
+  "min_radius_mm": 0.0,
+  "crop_origin_index": [
+    3,
+    3,
+    0
+  ],
+  "crop_shape": [
+    67,
+    67,
+    112
+  ],
+  "aorta_median": 244.96,
+  "aorta_mad": 6.77,
+  "background_median": 34.07,
+  "threshold": 231.42,
+  "raw_components": 34,
+  "accepted_daughters": 2,
+  "branches": [
+    {
+      "instance_id": "branch_001",
+      "ostium_xyz_mm": [
+        45.0,
+        36.0,
+        33.0
+      ],
+      "seed_xyz_mm": [
+        49.822,
+        36.401,
+        34.259
+      ],
+      "radius_mm": 1.592,
+      "direction_xyz": [
+        0.96444924,
+        0.08014806,
+        0.25182126
+      ],
+      "path_mm": 7.16,
+      "confidence": 0.836,
+      "evidence": {
+        "median_signal": 238.27,
+        "adaptive_threshold": 231.42,
+        "component_voxels": 60
+      }
+    },
+    {
+      "instance_id": "branch_002",
+      "ostium_xyz_mm": [
+        27.0,
+        36.0,
+        56.0
+      ],
+      "seed_xyz_mm": [
+        22.249,
+        37.234,
+        55.051
+      ],
+      "radius_mm": 1.409,
+      "direction_xyz": [
+        -0.95028985,
+        0.24685961,
+        -0.1897618
+      ],
+      "path_mm": 7.853,
+      "confidence": 0.866,
+      "evidence": {
+        "median_signal": 239.57,
+        "adaptive_threshold": 231.42,
+        "component_voxels": 50
+      }
+    }
+  ],
+  "runtime_s": 0.878
+}
