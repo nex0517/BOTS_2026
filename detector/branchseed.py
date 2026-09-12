@@ -160,6 +160,31 @@ def _read_nifti_raw(path: Path) -> Volume:
     return Volume(np.asarray(data), affine, spacing)
 
 
+def _orthonormalize_sform(raw: bytearray) -> bytearray:
+    """Replace a non-orthonormal sform rotation with its nearest orthonormal fit.
+
+    Some organizer NIfTI files carry sform matrices with tiny floating-point
+    drift in their direction cosines. SimpleITK refuses to load these outright,
+    so we snap the rotation to the nearest orthogonal matrix (via SVD) while
+    preserving voxel spacing and the translation, and leave everything else
+    (voxel data, qform, spacing) untouched.
+    """
+    endian = "<" if struct.unpack_from("<I", raw, 0)[0] == 348 else ">"
+    sform_code = struct.unpack_from(endian + "h", raw, 254)[0]
+    if sform_code <= 0:
+        return raw
+    vals = np.array(struct.unpack_from(endian + "12f", raw, 280), dtype=float).reshape(3, 4)
+    rotation, translation = vals[:, :3], vals[:, 3]
+    col_norms = np.linalg.norm(rotation, axis=0)
+    col_norms[col_norms == 0] = 1.0
+    unit_rotation = rotation / col_norms
+    u, _, vt = np.linalg.svd(unit_rotation)
+    fixed_rotation = (u @ vt) * col_norms
+    fixed = np.concatenate([fixed_rotation, translation[:, None]], axis=1).astype(np.float32)
+    struct.pack_into(endian + "12f", raw, 280, *fixed.flatten().tolist())
+    return raw
+
+
 def read_nifti(path: str | Path, require_simpleitk: bool = True) -> Volume:
     """Read NIfTI through SimpleITK and preserve its physical coordinate system.
 
@@ -182,7 +207,20 @@ def read_nifti(path: str | Path, require_simpleitk: bool = True) -> Volume:
             handle.write(path.read_bytes())
             handle.close()
             source = temporary
-        image = sitk.ReadImage(str(source))
+        try:
+            image = sitk.ReadImage(str(source))
+        except RuntimeError as exc:
+            if "orthonormal direction cosines" not in str(exc):
+                raise
+            repaired = _orthonormalize_sform(bytearray(_read_bytes(Path(source))))
+            handle = tempfile.NamedTemporaryFile(suffix=".nii.gz", delete=False)
+            with gzip.open(handle.name, "wb") as gz:
+                gz.write(bytes(repaired))
+            handle.close()
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+            temporary = source = Path(handle.name)
+            image = sitk.ReadImage(str(source))
         if image.GetDimension() != 3 or image.GetNumberOfComponentsPerPixel() != 1:
             raise ValueError(f"{path.name}: expected one scalar 3D volume")
         data = sitk.GetArrayFromImage(image).transpose(2, 1, 0)

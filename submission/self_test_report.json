@@ -7,23 +7,23 @@
       "passed": true,
       "detected_daughters": 3,
       "failures": [],
-      "runtime_s": 0.0466,
-      "python_tracemalloc_peak_mb": 8.12
+      "runtime_s": 0.0207,
+      "python_tracemalloc_peak_mb": 7.18
     },
     {
       "case": "close_origins",
       "passed": true,
       "detected_daughters": 2,
       "failures": [],
-      "runtime_s": 0.0247,
-      "python_tracemalloc_peak_mb": 7.17
+      "runtime_s": 0.0196,
+      "python_tracemalloc_peak_mb": 7.16
     },
     {
       "case": "common_trunk",
       "passed": true,
       "detected_daughters": 1,
       "failures": [],
-      "runtime_s": 0.0236,
+      "runtime_s": 0.0176,
       "python_tracemalloc_peak_mb": 7.17
     },
     {
@@ -31,7 +31,7 @@
       "passed": true,
       "detected_daughters": 1,
       "failures": [],
-      "runtime_s": 0.0219,
+      "runtime_s": 0.017,
       "python_tracemalloc_peak_mb": 7.17
     },
     {
@@ -39,7 +39,7 @@
       "passed": true,
       "detected_daughters": 0,
       "failures": [],
-      "runtime_s": 0.0173,
+      "runtime_s": 0.0158,
       "python_tracemalloc_peak_mb": 6.68
     },
     {
@@ -47,8 +47,8 @@
       "passed": true,
       "detected_daughters": 0,
       "failures": [],
-      "runtime_s": 0.0163,
-      "python_tracemalloc_peak_mb": 6.67
+      "runtime_s": 0.0157,
+      "python_tracemalloc_peak_mb": 6.68
     }
   ],
   "visual_check_count": 3,
