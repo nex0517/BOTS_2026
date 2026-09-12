@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from BOTS_2026.detector.branchseed import Config, Volume, detect, read_nifti, validate_output
+from detector.branchseed import Config, Volume, detect, read_nifti, validate_output
 
 
 ROOT = Path(__file__).resolve().parent
