@@ -208,7 +208,7 @@ def read_nifti(path: str | Path, require_simpleitk: bool = True) -> Volume:
             handle.write(path.read_bytes())
             handle.close()
             source = temporary
-<<<<<<< Updated upstream
+        os.environ.setdefault("ITK_NIFTI_SFORM_PERMISSIVE", "1")
         try:
             image = sitk.ReadImage(str(source))
         except RuntimeError as exc:
@@ -223,10 +223,6 @@ def read_nifti(path: str | Path, require_simpleitk: bool = True) -> Volume:
                 temporary.unlink(missing_ok=True)
             temporary = source = Path(handle.name)
             image = sitk.ReadImage(str(source))
-=======
-        os.environ.setdefault("ITK_NIFTI_SFORM_PERMISSIVE", "1")
-        image = sitk.ReadImage(str(source))
->>>>>>> Stashed changes
         if image.GetDimension() != 3 or image.GetNumberOfComponentsPerPixel() != 1:
             raise ValueError(f"{path.name}: expected one scalar 3D volume")
         data = sitk.GetArrayFromImage(image).transpose(2, 1, 0)
@@ -322,7 +318,12 @@ def _component_candidate(
     ostium_idx = np.median(touching, axis=0)
     ostium = ct.index_to_physical(ostium_idx)[0]
     centered = physical - ostium
-    covariance = centered.T @ centered / max(1, centered.shape[0])
+    # Fit the axis only from voxels within the proximal window: a global fit
+    # is pulled off the ostium-tangent heading by any distal curve or bend,
+    # since squared-distance weighting lets far voxels dominate the line fit.
+    local = np.linalg.norm(centered, axis=1) <= config.max_path_mm
+    fit_points = centered[local] if int(local.sum()) >= 3 else centered
+    covariance = fit_points.T @ fit_points / max(1, fit_points.shape[0])
     values, vectors = np.linalg.eigh(covariance)
     direction = vectors[:, int(np.argmax(values))]
     centroid_vector = physical.mean(axis=0) - ostium
