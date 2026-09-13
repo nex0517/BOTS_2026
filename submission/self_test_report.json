@@ -7,7 +7,7 @@
       "passed": true,
       "detected_daughters": 3,
       "failures": [],
-      "runtime_s": 0.0502,
+      "runtime_s": 0.1037,
       "python_tracemalloc_peak_mb": 7.18
     },
     {
@@ -15,7 +15,7 @@
       "passed": true,
       "detected_daughters": 2,
       "failures": [],
-      "runtime_s": 0.0664,
+      "runtime_s": 0.0806,
       "python_tracemalloc_peak_mb": 7.16
     },
     {
@@ -23,7 +23,7 @@
       "passed": true,
       "detected_daughters": 1,
       "failures": [],
-      "runtime_s": 0.0435,
+      "runtime_s": 0.0921,
       "python_tracemalloc_peak_mb": 7.17
     },
     {
@@ -31,7 +31,7 @@
       "passed": true,
       "detected_daughters": 1,
       "failures": [],
-      "runtime_s": 0.0364,
+      "runtime_s": 0.0863,
       "python_tracemalloc_peak_mb": 7.17
     },
     {
@@ -39,7 +39,7 @@
       "passed": true,
       "detected_daughters": 0,
       "failures": [],
-      "runtime_s": 0.038,
+      "runtime_s": 0.0829,
       "python_tracemalloc_peak_mb": 6.68
     },
     {
@@ -47,7 +47,7 @@
       "passed": true,
       "detected_daughters": 0,
       "failures": [],
-      "runtime_s": 0.0338,
+      "runtime_s": 0.0998,
       "python_tracemalloc_peak_mb": 6.68
     }
   ],

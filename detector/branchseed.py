@@ -24,7 +24,6 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
-import os
 
 import numpy as np
 
@@ -208,7 +207,6 @@ def read_nifti(path: str | Path, require_simpleitk: bool = True) -> Volume:
             handle.write(path.read_bytes())
             handle.close()
             source = temporary
-        os.environ.setdefault("ITK_NIFTI_SFORM_PERMISSIVE", "1")
         try:
             image = sitk.ReadImage(str(source))
         except RuntimeError as exc:
