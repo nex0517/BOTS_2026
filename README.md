@@ -1,152 +1,160 @@
 # Branchseed Navigator
 
-An evidence-first MVP for discovering direct abdominal-aortic daughter origins on contrast CT/CTA. It combines a CPU-oriented classical detector with an offline visual review surface that makes each scorer-visible result auditable.
+Branchseed Navigator is a CPU-only hackathon prototype for finding arteries that branch directly from the abdominal aorta in contrast-enhanced CT/CTA volumes. It takes a CT image and a binary mask of the parent aorta, detects a variable number of eligible daughter branches, and writes their geometry in physical millimetres.
 
-> Hackathon prototype only. Synthetic demo data is not patient data, and the output is not for diagnosis or clinical use.
+For every detected daughter, the output includes:
 
-## Submission quick start
+- the centre of the opening at the aortic wall (the ostium);
+- a seed point 5 mm along the daughter vessel;
+- an estimate of the local lumen radius; and
+- a unit direction vector pointing away from the aorta.
 
-One setup command:
+The repository also includes local visualization tools for reviewing detections against the CT and aorta mask.
+
+> This is a research and hackathon prototype. It is not a medical device and must not be used for diagnosis, treatment planning, or clinical decision-making.
+
+## Scope
+
+Branchseed Navigator is designed to:
+
+- process previously unseen CT/CTA and parent-aorta mask pairs without manual point placement;
+- discover direct aortic daughter vessels rather than search for a fixed list of named arteries;
+- preserve the input image's SimpleITK physical coordinate system;
+- keep separate wall openings as separate instances while treating a common trunk as one direct origin;
+- reject crop caps, downstream branches, unsupported proposals, and duplicate detections; and
+- run offline on a standard CPU-only laptop.
+
+The project does **not** segment the parent aorta, assign anatomical vessel names, reconstruct the full distal vascular tree, or infer vessels that are not visible in the supplied scan. The terminal iliac division is outside the core task.
+
+## Quick start
+
+Install the Python dependencies:
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-One official run command:
+Run the detector on one case:
 
 ```bash
 python run.py --image image.nii.gz --aorta-mask aorta_mask.nii.gz --output prediction.json
 ```
 
-Score the detector against the annotated review cases in `EVAL_SET/`:
+The image and mask must use the same grid and physical geometry. Both `.nii` and `.nii.gz` inputs are supported.
+
+Optional arguments include:
 
 ```bash
-python tools/score_eval.py --data-root EVAL_SET --tolerance 6 --report submission/eval_score_report.json
+python run.py \
+  --image image.nii.gz \
+  --aorta-mask aorta_mask.nii.gz \
+  --output prediction.json \
+  --diagnostics diagnostics.json \
+  --case-id subject001 \
+  --min-radius-mm 1.0
 ```
 
-The supported-trace update improves VMR discovery at 6 mm from **14 TP / 15 FP /
-10 FN (F1 0.528)** to **15 TP / 3 FP / 9 FN (F1 0.714)**. The VMR JSONs are
-high-quality derived references, not official organizer ground truth. These
-cases informed development and are no longer an untouched holdout.
+`--diagnostics` writes trace evidence, rejected proposals, timing, and failure reasons to a separate sidecar. `--min-radius-mm` applies the organizer-provided minimum eligible radius; it defaults to `0.0` when no threshold is supplied. These fields never enter the strict prediction JSON.
 
-Every emitted daughter now has a supported physical trace with its seed exactly
-5 mm along that path. Unresolved fallback proposals are rejected. This changes
-the older case counts to **1, 4, 5, 7, 2** for cases 19–23; their existing
-exact-count test still fails. Do not treat this version as fully validated for
-the hackathon. See `VMR_VALIDATION.md` for improvements, regressions and commands.
-
-Run synthetic regression checks (these do not certify every hackathon requirement):
-
-```bash
-python self_test.py
-```
-
-Run the supplied complete organizer dataset:
-
-```bash
-python self_test.py --data-root "TORALIS CHALLENGE" --output-root submission/organizer
-```
-
-That command runs every discovered `orig*/mask*` pair, writes one prediction per case, measures end-to-end runtime, validates the JSON/geometry contract, and generates verification PNGs for the first three cases under `submission/`.
-
-## Supported-trace update
-
-The detector uses a millimetre distance shell, native-CT cross-sections, a small
-cone of initial directions, and local tubular contrast at 0.8, 1.5, 2.5 and 4 mm.
-Connected wall labels and overlapping proximal paths control deduplication.
-A deterministic acceptance score filters weak proposals. Diagnostics include
-accepted traces, rejected proposals and failure reasons; strict JSON is unchanged.
-
-Synthetic tests cover close openings, a common trunk, small/faint vessels,
-parallel vessels, attached blobs, dots, anisotropic spacing, rotation and caps.
-Some faint and barely resolved vessels remain missed. No expected count, patient
-ID, reference geometry or named-anatomy template enters inference.
-
-Run all numerical and detection regressions:
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-## Why this is the right 24-hour project
-
-- It targets the highest-value problem: branch discovery and ostium placement account for 70% of the stated score.
-- It treats the supplied aorta mask as a search anchor, so computation stays inside a small periaortic crop.
-- It adapts contrast to each scan instead of relying on one brittle HU cutoff.
-- It traces supported proximal lumens, rejects unsupported paths and records the reasons in diagnostics, suppresses cap surfaces and deduplicates competing proposals.
-- It keeps strict prediction JSON separate from confidence, visuals and diagnostics.
-- It turns 3D topology into a memorable Aorta Map linked to evidence slices and proximal geometry.
-
-## Real-case TypeScript dashboard
-
-The integrated dashboard in `web/` reads `submission/organizer/development_predictions/` and uses this repository's Python detector for its **Re-run analysis** action. It displays the 25 real organizer cases with axial CT, aorta mask, branch arrows, counts, run times, and exact JSON. Start it with `node web/server.mjs` and open `http://127.0.0.1:3000`. See `web/README.md` for data-root and rebuild instructions.
-
-## Run the visual MVP
-
-Open `dist/index.html` directly, or serve the folder locally:
-
-```bash
-python -m http.server 4173 --directory dist
-```
-
-Then visit `http://127.0.0.1:4173`. Switch among the three synthetic edge cases, select branches on the Aorta Map or list, inspect the scorer-safe JSON, and export it. You can also open another prediction JSON locally; no file is uploaded.
-
-## Run the detector
-
-Fast smoke test with a deterministic synthetic CTA phantom:
+For a deterministic synthetic smoke test:
 
 ```bash
 python run.py --demo --output sample_data/prediction.json --diagnostics sample_data/diagnostics.json
 ```
 
-Run on an organizer case:
+## Output format
 
-```bash
-python run.py --image path/to/orig.nii --aorta-mask path/to/mask.nii --output prediction.json --diagnostics diagnostics.json
+The detector writes one JSON object per case:
+
+```json
+{
+  "case_id": "subject001",
+  "parent": {
+    "instance_id": "aorta"
+  },
+  "daughters": [
+    {
+      "instance_id": "branch_001",
+      "parent_instance_id": "aorta",
+      "ostium_xyz_mm": [12.4, -31.8, 184.6],
+      "seed_xyz_mm": [15.1, -29.7, 181.2],
+      "radius_mm": 2.7,
+      "direction_xyz": [0.56, 0.43, -0.71]
+    }
+  ]
+}
 ```
 
-Organizer NIfTI input is read through SimpleITK, and index conversion uses `TransformIndexToPhysicalPoint` or its continuous-index equivalent. The loader handles `.nii`, `.nii.gz`, and gzip content stored behind a `.nii` suffix. SciPy is required for morphology, connected-component labeling and tracing.
+Coordinates are physical millimetres, not voxel indices. If no eligible daughter is detected, `daughters` is an empty list.
 
-## Output contract
+## How the detector works
 
-`prediction.json` contains only the conservative scorer fields:
+The supplied aorta mask limits the search to a small physical shell around the aortic wall. Within that region, the pipeline:
 
-- `case_id`
-- `parent: {"instance_id": "aorta"}`
-- one daughter object per origin with `instance_id`, `parent_instance_id`, `ostium_xyz_mm`, `seed_xyz_mm`, `radius_mm`, and `direction_xyz`
+1. calibrates contrast from the current scan;
+2. proposes bright, vessel-like structures connected to the aortic wall;
+3. traces several candidate directions through native CT cross-sections;
+4. requires at least 5 mm of supported proximal lumen;
+5. estimates the ostium, arc-length seed, radius, and direction in physical space; and
+6. filters crop caps, weak paths, and overlapping duplicate proposals.
 
-Confidence, timing and evidence are written only to the optional diagnostics sidecar.
+The implementation is deterministic classical image processing built with NumPy, SciPy, and SimpleITK. It does not use case identifiers, expected branch counts, anatomical templates, saved predictions, or reference annotations during inference. See [ARCHITECTURE.md](ARCHITECTURE.md) for implementation details.
 
-## What is real vs. mocked
+## Run the dataset checks
 
-Real and runnable:
+Run the unit and regression tests:
 
-- custom NIfTI-1 loading, including gzip-content sniffing
-- official SimpleITK physical-coordinate conversion for organizer cases
-- image/mask geometry validation
-- 25 mm crop, per-case robust contrast model and cap exclusion
-- connected wall-origin proposals, CT-supported tracing with arc-length seeds, explicit rejection reasons, physical-space geometry and strict JSON validation
-- offline Aorta Map, selection, linked evidence views, scenario switching, local JSON import and JSON export
+```bash
+python -m unittest discover -s tests -v
+```
 
-Synthetic for the current MVP:
+Run the synthetic submission checks:
 
-- the browser's CT pixels and the three demo case measurements
-- benchmark numbers shown in the browser
-- clinical validation and organizer-score claims
+```bash
+python self_test.py
+```
 
-## Remaining work
+Run every discovered CT/mask pair in an organizer-style dataset and generate predictions, a report, and visual checks:
 
-The old count regression remains failing; the algorithm still has real false
-positives and false negatives against the available references. The local
-tracker does not guarantee stopping at every early bifurcation. The complete
-opening-first rewrite was not retained because it substantially increased false
-positives; proposal generation still uses conservative component shape checks.
-New independently annotated cases and a Linux four-core-affinity benchmark are
-needed before claiming generalization or full challenge compliance.
+```bash
+python self_test.py --data-root "path/to/TORALIS CHALLENGE" --output-root submission/organizer
+```
 
-The browser remains a synthetic visualization concept, including its CT pixels,
-evidence bars and benchmark values. Use the generated real-case PNGs for actual
-verification. A completed demo and clinical usefulness cannot be certified by
-the automatic file-inventory check.
+If development references are available in an `EVAL_SET` directory, score them with:
 
-See `SUBMISSION_CHECKLIST.md`, `EVAL_RESULTS.md` and `PITCH.md`.
+```bash
+python tools/score_eval.py --data-root EVAL_SET --tolerance 6 --report submission/eval_score_report.json
+```
+
+Development-set measurements and known geometry issues are documented in [EVAL_RESULTS.md](EVAL_RESULTS.md) and [VMR_VALIDATION.md](VMR_VALIDATION.md). They are not hidden-set or clinical-performance claims.
+
+## Local review dashboard
+
+The dashboard in `web/` displays axial CT slices, the parent mask, predicted ostia, daughter-direction arrows, radii, run times, and the exact output JSON. Its prediction API reads generated files from `submission/organizer/development_predictions/`, so generate those files with the dataset command above before starting it.
+
+Start the dashboard with Node.js 18 or newer:
+
+```bash
+node web/server.mjs
+```
+
+Then open `http://127.0.0.1:3000`. To enable **Re-run analysis**, make the source dataset available at the expected location or set `BRANCHSEED_DATA_ROOT` as described in [web/README.md](web/README.md).
+
+The older `dist/` interface is a standalone synthetic visualization concept. Its simulated images and displayed benchmark values are not real-case validation.
+
+## Repository guide
+
+- `detector/` - detection, tracing, opening association, tubular evidence, and parent-geometry logic
+- `run.py` - required single-case command-line entry point
+- `tests/` - synthetic, geometry, generalization, and regression tests
+- `tools/` - development-set scoring and VMR evaluation utilities
+- `web/` - local real-data review dashboard and volume-building tools
+- `dist/` - legacy synthetic visualization demo
+- `submission/` - generated predictions, reports, and visual checks currently stored in the repository
+- `self_test.py` - batch execution, contract validation, runtime reporting, and visual-check generation
+
+## Current limitations
+
+This remains a development prototype based on geometric and intensity heuristics. Very small or faint vessels, unusual wall contact, early bifurcations, calcification, and ambiguous crop geometry can still cause missed branches, false positives, or inaccurate seeds. Passing the included tests or matching the available development references does not establish generalization to hidden cases or clinical data.
+
+For submission status and remaining checks, see [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md).
