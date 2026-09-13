@@ -24,22 +24,16 @@ Score the detector against the annotated review cases in `EVAL_SET/`:
 python tools/score_eval.py --data-root EVAL_SET --tolerance 6 --report submission/eval_score_report.json
 ```
 
-The five hackathon-verified daughter counts are now reproduced: **3, 4, 3, 6,
-3** for cases 19–23. All **19/19 origins match one-to-one at 6 mm**, with no
-extra predictions (development precision/recall/F1 **1.00**). Mean ostium error
-is **1.56 mm**. This is performance on the five cases used during development,
-not an independent hidden-test score.
+The supported-trace update improves VMR discovery at 6 mm from **14 TP / 15 FP /
+10 FN (F1 0.528)** to **15 TP / 3 FP / 9 FN (F1 0.714)**. The VMR JSONs are
+high-quality derived references, not official organizer ground truth. These
+cases informed development and are no longer an untouched holdout.
 
-The corrected evaluator finds **17/19 seeds inside their matched native labels**.
-Two case-19 paths remain unresolved and retain the geometric fallback. Local
-seed-radius error is **0.22 mm across only 3 available reference measurements**;
-null radii are excluded. Never treat origin-radius error as seed-radius accuracy.
-
-All **25 organizer cases execute** without case-specific edits: **1.785 s mean,
-2.999 s maximum** including I/O with tracing validation and Python allocation
-instrumentation on this machine. Predictions for all 25 cases are in
-`submission/organizer/development_predictions/`; reviewed-case outputs are in
-`submission/development_predictions/`. See `EVAL_RESULTS.md` for limitations.
+Every emitted daughter now has a supported physical trace with its seed exactly
+5 mm along that path. Unresolved fallback proposals are rejected. This changes
+the older case counts to **1, 4, 5, 7, 2** for cases 19–23; their existing
+exact-count test still fails. Do not treat this version as fully validated for
+the hackathon. See `VMR_VALIDATION.md` for improvements, regressions and commands.
 
 Run synthetic regression checks (these do not certify every hackathon requirement):
 
@@ -55,26 +49,18 @@ python self_test.py --data-root "TORALIS CHALLENGE" --output-root submission/org
 
 That command runs every discovered `orig*/mask*` pair, writes one prediction per case, measures end-to-end runtime, validates the JSON/geometry contract, and generates verification PNGs for the first three cases under `submission/`.
 
-## Simpler detector update
+## Supported-trace update
 
-The detector now rejects approximately round bright solids using centered
-component geometry. It also batches radius sampling, reuses section grids, and
-uses the required SciPy implementation directly instead of duplicate fallback
-code. The two inference files contain 52 fewer lines in total.
+The detector uses a millimetre distance shell, native-CT cross-sections, a small
+cone of initial directions, and local tubular contrast at 0.8, 1.5, 2.5 and 4 mm.
+Connected wall labels and overlapping proximal paths control deduplication.
+A deterministic acceptance score filters weak proposals. Diagnostics include
+accepted traces, rejected proposals and failure reasons; strict JSON is unchanged.
 
-In the synthetic attached-sphere suite, false detections decreased from 30 to 0
-across 36 scans. The five development counts remain 3, 4, 3, 6, 3, and counts on
-all 25 supplied scans are unchanged. A paired local run measured 0.775 s mean
-including I/O versus 0.925 s before (about 16% lower elapsed time); this benchmark
-omits the allocation instrumentation used by the older self-test timing above.
-Single-run timings are approximate. Peak process RSS was about 1.39 GiB.
-
-This change improves blob rejection, not the unresolved small/faint-vessel
-sensitivity gap. Synthetic 2–2.5 mm vessels at 1.5 mm spacing and faint 3 mm
-vessels remain missed. A nearby parallel-tube ambiguity also remains. The shape
-check is a heuristic and may reject short, wide true branches; fresh annotated
-cases are required to assess that tradeoff. No count or anatomical template is
-used to force predictions.
+Synthetic tests cover close openings, a common trunk, small/faint vessels,
+parallel vessels, attached blobs, dots, anisotropic spacing, rotation and caps.
+Some faint and barely resolved vessels remain missed. No expected count, patient
+ID, reference geometry or named-anatomy template enters inference.
 
 Run all numerical and detection regressions:
 
@@ -87,7 +73,7 @@ python -m unittest discover -s tests -v
 - It targets the highest-value problem: branch discovery and ostium placement account for 70% of the stated score.
 - It treats the supplied aorta mask as a search anchor, so computation stays inside a small periaortic crop.
 - It adapts contrast to each scan instead of relying on one brittle HU cutoff.
-- It traces supported proximal lumens, reports unresolved paths in diagnostics, suppresses cap surfaces and deduplicates competing proposals.
+- It traces supported proximal lumens, rejects unsupported paths and records the reasons in diagnostics, suppresses cap surfaces and deduplicates competing proposals.
 - It keeps strict prediction JSON separate from confidence, visuals and diagnostics.
 - It turns 3D topology into a memorable Aorta Map linked to evidence slices and proximal geometry.
 
@@ -135,7 +121,7 @@ Real and runnable:
 - official SimpleITK physical-coordinate conversion for organizer cases
 - image/mask geometry validation
 - 25 mm crop, per-case robust contrast model and cap exclusion
-- connected wall-origin proposals, CT-supported tracing with arc-length seeds, explicit fallback status, physical-space geometry and strict JSON validation
+- connected wall-origin proposals, CT-supported tracing with arc-length seeds, explicit rejection reasons, physical-space geometry and strict JSON validation
 - offline Aorta Map, selection, linked evidence views, scenario switching, local JSON import and JSON export
 
 Synthetic for the current MVP:
@@ -146,11 +132,13 @@ Synthetic for the current MVP:
 
 ## Remaining work
 
-The two unresolved case-19 paths need better lumen tracking and seed placement.
-The local tracker does not yet guarantee a stop at every early bifurcation.
-The thresholds, voxelized opening-area gate and proposal-size filters were
-selected using these five cases; evaluate on held-out annotated cases before
-claiming generalization. Counts for the other 20 cases are not verified here.
+The old count regression remains failing; the algorithm still has real false
+positives and false negatives against the available references. The local
+tracker does not guarantee stopping at every early bifurcation. The complete
+opening-first rewrite was not retained because it substantially increased false
+positives; proposal generation still uses conservative component shape checks.
+New independently annotated cases and a Linux four-core-affinity benchmark are
+needed before claiming generalization or full challenge compliance.
 
 The browser remains a synthetic visualization concept, including its CT pixels,
 evidence bars and benchmark values. Use the generated real-case PNGs for actual

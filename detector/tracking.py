@@ -1,9 +1,4 @@
-"""Refine branch proposals with CT-supported paths in physical millimetres.
-
-Thresholds are development-set heuristics, not calibrated probabilities.
-Untraceable legacy proposals remain explicitly marked ``unresolved`` in the
-sidecar; they must not be presented as proven centerlines.
-"""
+"""Validate and rank native-CT-supported physical daughter traces."""
 
 from __future__ import annotations
 
@@ -11,6 +6,7 @@ from functools import lru_cache
 
 import numpy as np
 from scipy import ndimage as ndi
+from scipy.spatial import cKDTree
 
 
 def sample(ct, points, data=None):
@@ -120,17 +116,21 @@ def validate_trace(branch):
         raise ValueError("Seed is not 5 mm along the trace")
 
 
-def trace(ct, aorta, ostium, direction, threshold, length=10.):
+def trace(ct, aorta, ostium, direction, threshold, length=10., section_mask=None, parent_tree=None):
     """Follow recentered lumen sections; stop when support is lost or at 10 mm.
 
     This local tracker does not guarantee detection of every early bifurcation.
     Failure reasons remain available to the caller rather than fabricating a
     centerline or assigning a radius from unrelated component volume.
     """
+    section_mask = aorta if section_mask is None else section_mask
     direction = np.array(direction, dtype=float)
     direction /= np.linalg.norm(direction)
     origin = np.array(ostium, dtype=float)
-    initial = section(ct, aorta, origin + direction * 1.5, direction, threshold)
+    initial = None
+    for offset in (1.5,2.5,3.5):
+        initial = section(ct, section_mask, origin + direction * offset, direction, threshold)
+        if initial is not None:break
     if initial is None:
         return {"failure": "initial"}
     point, radius, signal = initial
@@ -140,10 +140,11 @@ def trace(ct, aorta, ostium, direction, threshold, length=10.):
     if not len(hits):
         # An oblique tangent can miss the parent. Test a short connection to
         # its nearest boundary instead, without allowing a remote structure.
-        index = ct.physical_to_index([point])[0]
-        candidates = np.argwhere(aorta)
-        nearest = candidates[np.argmin(np.sum(((candidates - index) * ct.spacing) ** 2, axis=1))]
-        target = ct.index_to_physical(nearest)[0]
+        if parent_tree is None:
+            boundary=np.argwhere(aorta & ~ndi.binary_erosion(aorta))
+            parent_tree=cKDTree(ct.index_to_physical(boundary))
+        _, nearest=parent_tree.query(point)
+        target=parent_tree.data[nearest]
         if np.linalg.norm(target - point) > 5:
             return {"failure": "no_parent"}
         back = point + np.linspace(0, 1, 30)[:, None] * (target - point)
@@ -162,13 +163,16 @@ def trace(ct, aorta, ostium, direction, threshold, length=10.):
     radii, signals = [radius, radius], [signal, signal]
     total = float(np.linalg.norm(point - origin))
     for _ in range(24):
-        result = section(ct, aorta, point + direction * .75, direction, threshold)
+        result = section(ct, section_mask, point + direction * .75, direction, threshold)
         if result is None:
             break
         next_point, radius, signal = result
         delta = next_point - point
         distance = np.linalg.norm(delta)
         if distance < .1 or distance > 2.5:
+            break
+        segment = point + np.linspace(0,1,max(3,int(np.ceil(distance/.25))+1))[:,None]*delta
+        if np.any(sample(ct,segment)<.85*threshold) or np.any(sample(ct,segment,aorta)>.5):
             break
         heading = delta / distance
         if np.dot(heading, direction) < .35:
@@ -190,7 +194,7 @@ def trace(ct, aorta, ostium, direction, threshold, length=10.):
     index = np.searchsorted(arc, 5)
     tangent = path[min(index, len(path) - 1)] - path[max(0, index - 1)]
     tangent /= np.linalg.norm(tangent)
-    seed_section = section(ct, aorta, seed, tangent, threshold)
+    seed_section = section(ct, section_mask, seed, tangent, threshold)
     if seed_section is None:
         return {"failure": "seed_section"}
     seed_signal = float(sample(ct, [seed])[0])
@@ -216,65 +220,103 @@ def trace(ct, aorta, ostium, direction, threshold, length=10.):
         "minimum_center_hu": minimum_signal,
         "median_center_hu": float(np.median(signals)),
         "seed_center_hu": seed_signal,
+        "radius_cv": float(np.std(radii)/max(np.mean(radii),1e-6)),
+        "maximum_radius_mm": float(max(radii)),
     }
     validate_trace(result)
     return result
 
 
 def refine_candidates(ct, aorta, candidates, parent_hu, background_hu, config):
-    signed = ndi.distance_transform_edt(~aorta, sampling=ct.spacing) - ndi.distance_transform_edt(aorta, sampling=ct.spacing)
-    gradients = np.gradient(ndi.gaussian_filter(signed, 1.), *ct.spacing)
+    distance = ndi.distance_transform_edt(~aorta, sampling=ct.spacing)
+    section_mask = aorta
+    parent_tree=cKDTree(ct.index_to_physical(np.argwhere(aorta & ~ndi.binary_erosion(aorta))))
+    signed = distance - ndi.distance_transform_edt(aorta, sampling=ct.spacing)
+    gradients = np.gradient(ndi.gaussian_filter(signed, 1./ct.spacing), *ct.spacing)
     rotation = ct.affine[:3, :3] / ct.spacing
-    span = max(10., parent_hu - background_hu)
     accepted = []
     for candidate in candidates:
-        level = candidate["evidence"]["adaptive_threshold"]
-        contrast = (candidate["evidence"]["median_signal"] - background_hu) / span
-        # Suppress weak periaortic tissue and highly attenuating plaque/bone.
-        if contrast < .55 or candidate["evidence"]["p90_signal"] > max(parent_hu * 1.6, parent_hu + 200):
-            continue
+        candidate['path_status']='rejected'
+        candidate['rejection_reason']='no_supported_trace'
+        candidate['trace_failures']={}
+        def reject(reason):
+            failures=candidate['trace_failures']
+            failures[reason]=failures.get(reason,0)+1
         origin = np.array(candidate["ostium_xyz_mm"])
-        heading = np.array(candidate["direction_xyz"])
-        candidate["proposal_ostium_xyz_mm"] = origin.tolist()
+        level = candidate["evidence"]["adaptive_threshold"]
+        if candidate['evidence']['median_signal'] < background_hu+.35*(parent_hu-background_hu) or candidate['evidence']['p90_signal'] > max(parent_hu*1.6,parent_hu+200):
+            candidate['rejection_reason']='component_contrast'
+            continue
         index = ct.physical_to_index(origin)[0]
         normal = rotation @ np.array([ndi.map_coordinates(g, index[:, None], order=1)[0] for g in gradients])
-        normal /= max(np.linalg.norm(normal), 1e-9)
-        outward = np.dot(normal, heading)
-        if outward < 0:
+        normal_length=np.linalg.norm(normal)
+        if normal_length<1e-9:
+            candidate['rejection_reason']='undefined_surface_normal'
             continue
-        if candidate["contact_extent_mm"] > config.max_path_mm and (outward < .5 or candidate.get("requires_trace")):
-            # A daughter running beside the parent has a long contact strip.
-            # Its upstream end, rather than the strip midpoint, anchors origin.
-            contact = np.array(candidate["contact_xyz_mm"])
-            contact = contact[np.linalg.norm(contact - origin, axis=1) <= config.max_path_mm]
-            if len(contact) > 2:
-                projection = contact @ heading
-                origin = np.mean(contact[projection <= np.quantile(projection, .2)], axis=0)
-        result = trace(ct, aorta, origin, heading, level)
-        if candidate.get("requires_trace"):
-            # A fused component's PCA axis is unreliable. Search a bounded cone
-            # about the physical wall normal, retaining only enclosed lumens.
-            u, v = _basis(normal)
-            options = []
-            for a in [-.7, 0., .7]:
-                for b in [-.7, 0., .7]:
-                    direction = normal + a * u + b * v
-                    direction /= np.linalg.norm(direction)
-                    traced = trace(ct, aorta, origin, direction, level)
-                    if "failure" not in traced and traced["origin_diameter_mm"] >= config.min_origin_diameter_mm and traced["radius_mm"] >= .75:
-                        options.append(traced)
-            if not options:
-                continue
-            result = min(options, key=lambda item: item["radius_mm"])
-        if "failure" not in result:
-            if result["minimum_center_hu"] < background_hu + .5 * span:
-                continue
-            candidate.update(result)
-            candidate["path_status"] = "traced"
-        else:
-            candidate["path_status"] = "unresolved"
-            candidate["trace_failure"] = result["failure"]
-        if candidate["origin_diameter_mm"] < config.min_origin_diameter_mm:
+        normal /= normal_length
+        heading=np.array(candidate['direction_xyz'])
+        outward=float(np.dot(normal,heading))
+        if outward<0:
+            candidate['rejection_reason']='inward_proposal'
             continue
-        accepted.append(candidate)
+        if candidate['contact_extent_mm']>config.max_path_mm and (outward<.5 or candidate.get('requires_trace')):
+            contact=np.array(candidate['contact_xyz_mm'])
+            contact=contact[np.linalg.norm(contact-origin,axis=1)<=config.max_path_mm]
+            if len(contact)>2:
+                projection=contact@heading
+                origin=np.mean(contact[projection<=np.quantile(projection,.2)],axis=0)
+        u, v = _basis(normal)
+        options = []
+        directions=[np.array(candidate['direction_xyz'])]
+        if np.dot(directions[0],normal)<0:directions[0]*=-1
+        for a,b in [(0,0),(.7,0),(-.7,0),(0,.7),(0,-.7),(.7,.7),(.7,-.7),(-.7,.7),(-.7,-.7)]:
+            direction=normal+a*u+b*v
+            directions.append(direction/np.linalg.norm(direction))
+        for direction in directions:
+            result = trace(ct,aorta,origin,direction,level,section_mask=section_mask,parent_tree=parent_tree)
+            if 'failure' in result:
+                reject(result['failure'])
+                continue
+            if result['origin_diameter_mm']<config.min_origin_diameter_mm:
+                reject('origin_below_2mm')
+                continue
+            path=np.array(result['path_xyz_mm']);arc=np.array(result['path_arc_mm'])
+            positions=np.arange(0,5.01,.25)
+            dense=np.array([np.interp(positions,arc,path[:,k]) for k in range(3)]).T
+            distances=sample(ct,dense,distance)
+            hu=sample(ct,dense)
+            if np.any(sample(ct,dense[positions>=1],aorta)>.5) or hu.min()<.85*level:
+                reject('contrast_or_parent_return')
+                continue
+            if distances[-1]<1 or distances[-1]-distances[4]<.5:
+                reject('insufficient_parent_separation')
+                continue
+            if np.percentile(hu[positions>=2],90)>max(parent_hu*1.6,parent_hu+200):
+                reject('excessive_attenuation')
+                continue
+            if result['radius_cv']>.5 or result['maximum_radius_mm']>6:
+                reject('unstable_or_unbounded_radius')
+                continue
+            result['seed_parent_distance_mm']=float(distances[-1])
+            from .tubular import evidence
+            tube=evidence(ct,aorta,result,parent_hu,background_hu)
+            result['tubular_evidence']=tube
+            result['confidence'] = (.2*min(1.,result['path_mm']/10)
+                +.2*np.clip((result['minimum_center_hu']-background_hu)/max(10.,parent_hu-background_hu),0,1)
+                +.3*tube+.15*(1-min(1.,result['radius_cv']/.5))
+                +.15*min(1.,distances[-1]/5))
+            options.append(result)
+        if options:
+            candidate['proposal_ostium_xyz_mm'] = origin.tolist()
+            candidate.update(max(options,key=lambda x:x['confidence']))
+            path=np.array(candidate['path_xyz_mm'])
+            headings=np.diff(path,axis=0)
+            headings/=np.linalg.norm(headings,axis=1)[:,None]
+            candidate['minimum_direction_cosine']=float(np.min(np.sum(headings[1:]*headings[:-1],axis=1))) if len(headings)>1 else 1.
+            competitors=[r['confidence'] for r in options if np.linalg.norm(np.array(r['seed_xyz_mm'])-candidate['seed_xyz_mm'])>max(1.,candidate['radius_mm'])]
+            candidate['hypothesis_margin']=float(candidate['confidence']-max(competitors)) if competitors else None
+            candidate['valid_hypotheses']=len(options)
+            candidate['rejection_reason']=None
+            candidate['path_status']='traced' 
+            accepted.append(candidate)
     return accepted

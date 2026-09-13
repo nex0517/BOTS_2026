@@ -86,6 +86,7 @@ class Volume:
 class Config:
     crop_margin_mm: float = 25.0
     shell_mm: float = 15.0
+    acceptance_score: float = 0.675
     cap_exclusion_mm: float = 4.0
     acceptance_path_mm: float = 5.0
     max_path_mm: float = 10.0
@@ -119,7 +120,7 @@ class Config:
     # the clean version of each.
     lumen_fraction_ladder: tuple[float, ...] = (0.35, 0.40, 0.45, 0.55)
     # Geometric plausibility gates for a proximal daughter segment.
-    radius_floor_mm: float = 1.25
+    radius_floor_mm: float = 0.75
     radius_ceiling_mm: float = 6.0
     min_tubularity: float = 2.0
     min_shape_anisotropy: float = 1.5
@@ -425,10 +426,6 @@ def _component_candidate(
         return None
     physical = ct.index_to_physical(coords)
     touching_physical = ct.index_to_physical(touching)
-    opening_area = touching.shape[0] * float(np.min(ct.spacing)) ** 2
-    # Allow a 10% area discretization margin at the voxelized wall.
-    if opening_area < .9 * math.pi * (config.min_origin_diameter_mm / 2) ** 2:
-        return None
     # A real ostium is a compact opening. A vein, duodenum or mask-leak blob
     # that merely runs alongside the aorta touches the wall over a long strip,
     # so the spread of the contact patch separates the two cases cheaply.
@@ -466,6 +463,10 @@ def _component_candidate(
     centroid_vector = physical.mean(axis=0) - ostium
     if float(np.dot(direction, centroid_vector)) < 0:
         direction *= -1
+    native_heading=(ct.affine[:3,:3]/ct.spacing).T@direction
+    thickness=float(np.sum(np.abs(native_heading)*ct.spacing))
+    opening_area=len(touching)*float(np.prod(ct.spacing))/max(thickness,1e-6)
+    if opening_area < .9*math.pi*(config.min_origin_diameter_mm/2)**2:return None
     projections = centered @ direction
     positive = projections[projections >= 0]
     path_mm = float(np.percentile(positive, 98)) if positive.size else 0.0
@@ -532,10 +533,9 @@ def detect(ct: Volume, mask: Volume, config: Config = Config()) -> tuple[dict, d
         raise ValueError("CT and aorta mask do not share the same physical transform")
     cropped, aorta, crop_origin = _crop(ct, mask, config)
     axis = int(np.argmax(np.ptp(np.argwhere(aorta), axis=0) * cropped.spacing))
-    iterations = max(1, int(math.ceil(config.shell_mm / float(np.min(cropped.spacing)))))
-    shell = ndi.binary_dilation(aorta, iterations=iterations) & ~aorta
     anchor = _WallAnchor(aorta, cropped.spacing, config)
-    wall = anchor.wall
+    shell = (anchor.distance > 0) & (anchor.distance <= config.shell_mm)
+    wall = anchor.wall.copy()
     gapped = None
     if config.wall_gap_mm > 0:
         # The parent's own un-masked rim, cut out. Used only as a fallback split
@@ -602,22 +602,35 @@ def detect(ct: Volume, mask: Volume, config: Config = Config()) -> tuple[dict, d
                 item["threshold_fraction"] = round(fraction, 3)
                 item["rim_split"] = True
                 found.append(item)
+    proposals=found
+    for number,item in enumerate(proposals):item['proposal_id']=f'proposal_{number+1:04d}'
     found = refine_candidates(cropped, aorta, found, core_median, background, config)
+    from .openings import WallOpenings, same_daughter
+    openings=WallOpenings(cropped,aorta,background+min(fractions)*span)
+    for item in found:item['wall_openings']=openings.associate(item)
+    from .parent_geometry import ParentEnds
+    ends=ParentEnds(cropped,aorta)
+    valid=[]
+    for item in found:
+        reason=('no_connected_wall_opening' if not item['wall_openings'] else ends.reject_reason(item))
+        if reason is None and item['confidence']<config.acceptance_score:reason='below_acceptance_score'
+        if reason:
+            item['path_status']='rejected'
+            item['rejection_reason']=reason
+        else:valid.append(item)
+    found=valid
     found.sort(key=lambda d: (d.get("path_status") == "traced", d["confidence"]), reverse=True)
     count = total_components
     kept: list[dict] = []
     for candidate in found:
         o = np.array(candidate["ostium_xyz_mm"])
         direction = np.array(candidate["direction_xyz"])
-        duplicate = any(
-            np.linalg.norm(o - np.array(k["ostium_xyz_mm"])) < float(np.min(cropped.spacing))
-            or (min(np.linalg.norm(o - np.array(k["ostium_xyz_mm"])),
-                    np.linalg.norm(np.array(candidate["proposal_ostium_xyz_mm"]) - np.array(k["proposal_ostium_xyz_mm"]))) < config.merge_radius_mm
-                and float(np.dot(direction, np.array(k["direction_xyz"]))) > 0.65)
-            for k in kept
-        )
+        duplicate=any(same_daughter(candidate,k) for k in kept)
         if not duplicate:
             kept.append(candidate)
+        else:
+            candidate['path_status']='rejected'
+            candidate['rejection_reason']='duplicate_opening_and_trace' 
     kept.sort(key=lambda d: tuple(d["ostium_xyz_mm"][::-1]))
     daughters = []
     diagnostics = []
@@ -634,7 +647,10 @@ def detect(ct: Volume, mask: Volume, config: Config = Config()) -> tuple[dict, d
         diagnostics.append({"instance_id": instance_id, **item})
     result = {"case_id": "case", "parent": {"instance_id": "aorta"}, "daughters": daughters}
     sidecar = {
-        "pipeline": "adaptive-shell-shape-filter",
+        "pipeline": "physical-shell-supported-traces",
+        "acceptance_score": config.acceptance_score,
+        "confidence_note": "Deterministic validation-tuned score; not a probability.",
+        "rejected_candidates": [b for b in proposals if b.get("path_status") != "traced"],
         "physical_transform_backend": "SimpleITK" if ct.sitk_image is not None else "synthetic-or-test-affine",
         "min_radius_mm": config.min_radius_mm,
         "crop_origin_index": crop_origin.tolist(),

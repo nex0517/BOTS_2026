@@ -1,17 +1,17 @@
 # Architecture
 
-The detector has four stages:
+The detector keeps proposal generation separate from evidence required for output:
 
 ```text
 CT + aorta mask
       |
-Crop and estimate scan contrast
+Crop, physical-distance shell, and scan contrast
       |
 Propose bright components near the wall
       |
-Check shape and trace proximal lumen
+Check shape and trace multiple initial directions
       |
-Merge duplicate proposals -> prediction JSON + optional diagnostics
+Associate connected wall openings, score, deduplicate -> strict JSON + diagnostics
 ```
 
 `detector/branchseed.py` handles input, candidate geometry, duplicate suppression,
@@ -30,10 +30,29 @@ Radius rays are sampled in one batch. The fixed cross-section grid is reused.
 These optimizations avoid repeated Python loops and allocations without adding
 another detector, model, or tuning stage.
 
-Two development-case paths still use the existing unresolved geometric fallback.
-A successful trace also does not prove vessel identity or guarantee detection of
-every early bifurcation. Diagnostics expose these limits; strict JSON contains
-only the challenge fields. Small/faint-vessel sensitivity remains incomplete.
+`tracking.py` tests a PCA heading and nine directions around a physical surface
+normal. Each valid path must supply bounded contrast-filled sections, at least
+5 mm of supported native-CT lumen, stable positive radius, continuity and
+separation from the parent. Seed placement uses path arc length. No unresolved
+proposal can enter strict output.
+
+`openings.py` associates traced origins with connected exterior wall crossings
+and requires compatible directions and overlapping paths before merging. It
+never merges merely because origins are close. `tubular.py` samples four local
+physical radius scales without allocating full-volume Hessian fields.
+`parent_geometry.py` estimates parent endpoints and rejects cap/continuation
+geometry. Conservative proposal shape filters and the older cap search margin
+remain; a more permissive opening-first generator failed the ablation checks.
+
+The score weights length, minimum contrast, tubular evidence, radius stability
+and parent separation. Boundedness and connection are prerequisites. Median
+contrast, curvature and competing-hypothesis margin are recorded, but adding
+them to the weighted score did not improve validation and was not retained.
+The cutoff is a development-tuned deterministic score, not a probability.
+
+Traces establish local image support, not vessel identity. Early bifurcation
+stopping, faint sensitivity and cap interpretation remain imperfect. The
+existing exact-count regression fails and has not been weakened.
 
 Tests and scoring are separate from inference. Evaluate both one-to-one origins
 and count errors, including empty scans and bright-object negatives. Known-case
