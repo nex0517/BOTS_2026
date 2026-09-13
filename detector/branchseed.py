@@ -24,6 +24,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
+import os
 
 import numpy as np
 
@@ -207,6 +208,7 @@ def read_nifti(path: str | Path, require_simpleitk: bool = True) -> Volume:
             handle.write(path.read_bytes())
             handle.close()
             source = temporary
+<<<<<<< Updated upstream
         try:
             image = sitk.ReadImage(str(source))
         except RuntimeError as exc:
@@ -221,6 +223,10 @@ def read_nifti(path: str | Path, require_simpleitk: bool = True) -> Volume:
                 temporary.unlink(missing_ok=True)
             temporary = source = Path(handle.name)
             image = sitk.ReadImage(str(source))
+=======
+        os.environ.setdefault("ITK_NIFTI_SFORM_PERMISSIVE", "1")
+        image = sitk.ReadImage(str(source))
+>>>>>>> Stashed changes
         if image.GetDimension() != 3 or image.GetNumberOfComponentsPerPixel() != 1:
             raise ValueError(f"{path.name}: expected one scalar 3D volume")
         data = sitk.GetArrayFromImage(image).transpose(2, 1, 0)
