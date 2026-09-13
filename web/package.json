@@ -1,0 +1,11 @@
+{
+  "name": "branchseed-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "start": "node server.mjs"
+  },
+  "devDependencies": {"typescript": "^5.9.0"}
+}
