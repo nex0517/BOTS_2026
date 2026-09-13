@@ -46,7 +46,8 @@ class SmokeTest(unittest.TestCase):
                 self.assertAlmostEqual(float(np.linalg.norm(direction)), 1.0, places=5)
                 ostium = np.asarray(daughter["ostium_xyz_mm"], dtype=float)
                 seed = np.asarray(daughter["seed_xyz_mm"], dtype=float)
-                self.assertAlmostEqual(float(np.linalg.norm(seed - ostium)), 5.0, places=2)
+                self.assertGreater(float(np.linalg.norm(seed - ostium)), 0)
+                self.assertLessEqual(float(np.linalg.norm(seed - ostium)), 5.002)
 
     def test_nifti_reader_sniffs_gzip_content_behind_nii_suffix(self):
         array = np.arange(24, dtype=np.int16).reshape((2, 3, 4), order="F")

@@ -26,8 +26,8 @@ from detector.branchseed import Config, Volume, detect, read_nifti, validate_out
 ROOT = Path(__file__).resolve().parent
 OFFICIAL_RUN = "python run.py --image image.nii.gz --aorta-mask aorta_mask.nii.gz --output prediction.json"
 SYNTHETIC_EXPECTATIONS = {
-    "variable_branches": (2, None),
-    "close_origins": (2, None),
+    "variable_branches": (3, 3),
+    "close_origins": (2, 2),
     "common_trunk": (1, 1),
     "downstream_branch": (1, 1),
     "flat_cap": (0, 0),
@@ -35,7 +35,9 @@ SYNTHETIC_EXPECTATIONS = {
 }
 
 
-def _path_points(z0: float, side: int = 1, y_slope: float = 0.0, start: int = 4, stop: int = 22):
+def _path_points(z0: float, side: int = 1, y_slope: float = 0.0, start: int = 2, stop: int = 22):
+    # Begin inside the parent so the phantom has a full eligible opening,
+    # rather than a one-voxel tip touching the mask.
     cx = cy = 36.0
     return [(cx + side * (7 + step), cy + y_slope * step, z0) for step in range(start, stop)]
 
@@ -98,8 +100,11 @@ def _output_invariants(result: dict) -> list[str]:
             failures.append(f"{daughter['instance_id']}: direction is not unit length")
         ostium = np.asarray(daughter["ostium_xyz_mm"], dtype=float)
         seed = np.asarray(daughter["seed_xyz_mm"], dtype=float)
-        if abs(float(np.linalg.norm(seed - ostium)) - 5.0) > 0.01:
-            failures.append(f"{daughter['instance_id']}: seed is not 5 mm from ostium")
+        # A curved 5 mm path has a chord shorter than 5 mm. JSON alone cannot
+        # prove its arc length; validate stored tracing diagnostics separately.
+        chord = float(np.linalg.norm(seed - ostium))
+        if not 0 < chord <= 5.01:
+            failures.append(f"{daughter['instance_id']}: invalid ostium-to-seed chord")
     return failures
 
 
@@ -129,36 +134,72 @@ def _draw_arrow(draw: ImageDraw.ImageDraw, start, end, color=(255, 138, 76), wid
 
 
 def write_visual_check(ct: Volume, mask: Volume, result: dict, destination: Path, title: str) -> None:
-    panel_size = 300
-    header = 72
-    canvas = Image.new("RGB", (panel_size * 3, panel_size + header + 34), (7, 20, 28))
+    """Three MIP panels cropped to the aorta, with the mask, ostia and arrows.
+
+    The crop matters: a whole-body MIP shrinks the aorta to a few pixels and the
+    check stops being checkable. Everything is drawn inside a 30 mm box around
+    the supplied parent mask, at the scale a reviewer needs to see whether an
+    ostium sits on the wall and whether its arrow points down the daughter.
+    """
+    panel_size = 420
+    header = 78
+    footer = 34
+    mask_bool = mask.data > 0
+    occupied = np.argwhere(mask_bool)
+    if occupied.size == 0:
+        lo = np.zeros(3, dtype=int)
+        hi = np.asarray(ct.data.shape, dtype=int)
+    else:
+        pad = np.ceil(30.0 / ct.spacing).astype(int)
+        lo = np.maximum(0, occupied.min(axis=0) - pad)
+        hi = np.minimum(np.asarray(ct.data.shape), occupied.max(axis=0) + pad + 1)
+    window = tuple(slice(int(a), int(b)) for a, b in zip(lo, hi))
+    ct_crop = ct.data[window]
+    mask_crop = mask_bool[window]
+    shape = np.asarray(ct_crop.shape)
+
+    canvas = Image.new("RGB", (panel_size * 3, panel_size + header + footer), (7, 20, 28))
     draw = ImageDraw.Draw(canvas)
     draw.text((20, 16), f"BRANCHSEED VISUAL CHECK | {title}", fill=(232, 241, 242))
-    draw.text((20, 42), "cyan = parent aorta mask   orange = ostium to 5 mm seed", fill=(137, 162, 173))
+    draw.text(
+        (20, 42),
+        f"cyan = parent aorta mask   orange = ostium marker and 8 mm direction arrow   "
+        f"{len(result['daughters'])} daughter instances",
+        fill=(137, 162, 173),
+    )
     specs = [(2, "AXIAL MIP", (0, 1)), (1, "CORONAL MIP", (0, 2)), (0, "SAGITTAL MIP", (1, 2))]
-    mask_bool = mask.data > 0
     for panel, (axis, label, dims) in enumerate(specs):
-        gray = Image.fromarray(_normalized_projection(ct.data, axis), mode="L").convert("RGB")
+        gray = Image.fromarray(_normalized_projection(ct_crop, axis), mode="L").convert("RGB")
         gray = gray.resize((panel_size, panel_size), Image.Resampling.BILINEAR)
         x0 = panel * panel_size
         canvas.paste(gray, (x0, header))
         overlay = ImageDraw.Draw(canvas)
-        mask_projection = np.any(mask_bool, axis=axis).T
-        edge = _outline(mask_projection)
+        edge = _outline(np.any(mask_crop, axis=axis).T)
         rows, cols = edge.shape
         ys, xs = np.where(edge)
-        for ex, ey in zip(xs[::2], ys[::2]):
+        for ex, ey in zip(xs, ys):
             px = x0 + int(ex / max(1, cols - 1) * (panel_size - 1))
             py = header + int(ey / max(1, rows - 1) * (panel_size - 1))
             overlay.point((px, py), fill=(92, 225, 230))
+
+        def project(point_mm: np.ndarray) -> tuple[float, float]:
+            index = ct.physical_to_index(np.asarray(point_mm, dtype=float))[0] - lo
+            u = index[dims[0]] / max(1, shape[dims[0]] - 1) * (panel_size - 1)
+            v = index[dims[1]] / max(1, shape[dims[1]] - 1) * (panel_size - 1)
+            return x0 + u, header + v
+
         for daughter in result["daughters"]:
-            points = ct.physical_to_index(np.array([daughter["ostium_xyz_mm"], daughter["seed_xyz_mm"]]))
-            projected = []
-            for point in points:
-                u, v = point[dims[0]], point[dims[1]]
-                projected.append((x0 + u / max(1, ct.data.shape[dims[0]] - 1) * (panel_size - 1), header + v / max(1, ct.data.shape[dims[1]] - 1) * (panel_size - 1)))
-            _draw_arrow(overlay, projected[0], projected[1])
-            overlay.ellipse((projected[0][0]-4, projected[0][1]-4, projected[0][0]+4, projected[0][1]+4), outline=(255,255,255), width=2)
+            ostium = np.asarray(daughter["ostium_xyz_mm"], dtype=float)
+            direction = np.asarray(daughter["direction_xyz"], dtype=float)
+            head = project(ostium + direction * 8.0)
+            tail = project(ostium)
+            _draw_arrow(overlay, tail, head)
+            overlay.ellipse(
+                (tail[0] - 5, tail[1] - 5, tail[0] + 5, tail[1] + 5), outline=(255, 255, 255), width=2
+            )
+            overlay.text(
+                (tail[0] + 7, tail[1] - 14), daughter["instance_id"].replace("branch_", "b"), fill=(255, 196, 140)
+            )
         overlay.rectangle((x0, header, x0 + panel_size - 1, header + panel_size - 1), outline=(32, 61, 73))
         overlay.text((x0 + 10, header + panel_size + 9), label, fill=(232, 241, 242))
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -169,6 +210,10 @@ def _timed_detect(ct: Volume, mask: Volume, config: Config):
     tracemalloc.start()
     started = time.perf_counter()
     result, diagnostics = detect(ct, mask, config)
+    for branch in diagnostics["branches"]:
+        if branch.get("path_status") == "traced":
+            from detector.tracking import validate_trace
+            validate_trace(branch)
     elapsed = time.perf_counter() - started
     _, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
@@ -209,7 +254,15 @@ def run_synthetic(output_root: Path) -> dict:
 
 def _find_pairs(data_root: Path):
     for image_path in sorted(data_root.rglob("orig*.nii*")):
-        masks = sorted(image_path.parent.glob("mask*.nii*"))
+        # Organizer layout uses mask*.nii; the annotated review packages name the
+        # same parent-lumen volume aorta*.nii.gz. Accept both, and never mistake
+        # a daughter or combined label volume for the parent mask.
+        masks = [
+            candidate
+            for pattern in ("mask*.nii*", "aorta*.nii*")
+            for candidate in sorted(image_path.parent.glob(pattern))
+            if "daughter" not in candidate.name
+        ]
         if len(masks) == 1:
             yield image_path.parent.name, image_path, masks[0]
 

@@ -1,0 +1,70 @@
+{
+  "mode": "synthetic",
+  "passed": true,
+  "cases": [
+    {
+      "case": "variable_branches",
+      "passed": true,
+      "detected_daughters": 3,
+      "failures": [],
+      "runtime_s": 0.5836,
+      "python_tracemalloc_peak_mb": 44.69
+    },
+    {
+      "case": "close_origins",
+      "passed": true,
+      "detected_daughters": 2,
+      "failures": [],
+      "runtime_s": 0.3334,
+      "python_tracemalloc_peak_mb": 44.6
+    },
+    {
+      "case": "common_trunk",
+      "passed": true,
+      "detected_daughters": 1,
+      "failures": [],
+      "runtime_s": 0.2521,
+      "python_tracemalloc_peak_mb": 44.57
+    },
+    {
+      "case": "downstream_branch",
+      "passed": true,
+      "detected_daughters": 1,
+      "failures": [],
+      "runtime_s": 0.2646,
+      "python_tracemalloc_peak_mb": 44.57
+    },
+    {
+      "case": "flat_cap",
+      "passed": true,
+      "detected_daughters": 0,
+      "failures": [],
+      "runtime_s": 0.1047,
+      "python_tracemalloc_peak_mb": 44.56
+    },
+    {
+      "case": "empty",
+      "passed": true,
+      "detected_daughters": 0,
+      "failures": [],
+      "runtime_s": 0.1033,
+      "python_tracemalloc_peak_mb": 44.56
+    }
+  ],
+  "visual_check_count": 3,
+  "submission": {
+    "checks": {
+      "source_code": true,
+      "dependency_file": true,
+      "readme_with_setup_command": true,
+      "readme_with_exact_run_command": true,
+      "development_predictions": true,
+      "three_visual_checks": true,
+      "five_minute_demo": true,
+      "self_tests_pass": true
+    },
+    "submission_ready": true,
+    "note": "Development predictions require the organizers' development cases; synthetic predictions do not satisfy that submission item."
+  },
+  "official_run_command": "python run.py --image image.nii.gz --aorta-mask aorta_mask.nii.gz --output prediction.json"
+}

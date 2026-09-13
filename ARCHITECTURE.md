@@ -1,34 +1,43 @@
 # Architecture
 
+The detector has four stages:
+
 ```text
-CTA NIfTI + parent-aorta mask
-              |
-     validate grid + affine
-              |
-      crop to 25 mm ROI
-              |
- per-case lumen calibration
-              |
- bright wall-touching proposals
-              |
-  >=5 mm path + cap rejection
-              |
- physical geometry + graph NMS
-          /            \
- strict prediction   diagnostics sidecar
-      JSON             + Aorta Map
+CT + aorta mask
+      |
+Crop and estimate scan contrast
+      |
+Propose bright components near the wall
+      |
+Check shape and trace proximal lumen
+      |
+Merge duplicate proposals -> prediction JSON + optional diagnostics
 ```
 
-## Detection layer
+`detector/branchseed.py` handles input, candidate geometry, duplicate suppression,
+and the output contract. `detector/tracking.py` samples cross-sections and refines
+paths. The CLI is `run.py`. NumPy, SciPy and SimpleITK provide the numerical and
+image operations; there is no second morphology implementation to maintain.
 
-The baseline in `detector/branchseed.py` is deliberately classical. It can be inspected and timed on CPU. Organizer NIfTI volumes are read through SimpleITK, with physical points produced through the image transform API. Its public contract is a list of physical-space proximal branch measurements, independent of visualization.
+Candidate shape is measured in physical coordinates. The wall-anchored moment
+estimates the outgoing direction; the centered moment rejects approximately
+round solids whose displacement from the wall would otherwise resemble an
+elongated branch. This is a geometric heuristic, not an anatomical template.
+No vessel names, expected counts, case identifiers or reference annotations
+enter detection.
 
-The next accuracy slice should replace component PCA with a surface-normal proposal map plus a beam width of 3–5 over the first 10 mm. Keep the same output and diagnostics contracts so the team can improve detection without breaking the demo.
+Radius rays are sampled in one batch. The fixed cross-section grid is reused.
+These optimizations avoid repeated Python loops and allocations without adding
+another detector, model, or tuning stage.
 
-## Product layer
+Two development-case paths still use the existing unresolved geometric fallback.
+A successful trace also does not prove vessel identity or guarantee detection of
+every early bifurcation. Diagnostics expose these limits; strict JSON contains
+only the challenge fields. Small/faint-vessel sensitivity remains incomplete.
 
-The static browser in `dist/` is dependency-free and offline. It opens on the working surface, not a landing page. The unwrapped map is the primary navigation model; the schematic 3D panel gives context; linked CT evidence, radius plane, confidence components and topology notes explain why each branch survived.
+Tests and scoring are separate from inference. Evaluate both one-to-one origins
+and count errors, including empty scans and bright-object negatives. Known-case
+results are development results, not evidence of universal generalization.
 
-## Safety boundary
-
-The project discovers and measures geometry. It does not identify anatomy, predict invisible vessels, diagnose pathology or recommend care. Every demo surface states that it is a synthetic hackathon prototype.
+The offline browser in `dist/` is an independent synthetic visualization demo.
+Its simulated CT and benchmark display must not be used as real-case validation.

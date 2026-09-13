@@ -1,69 +1,64 @@
 {
-  "mode": "synthetic",
+  "mode": "development-data",
   "passed": true,
+  "case_count": 5,
+  "average_runtime_s": 0.739,
+  "runtime_target_s": 60,
+  "visual_check_count": 6,
   "cases": [
     {
-      "case": "variable_branches",
+      "case": "case_19",
       "passed": true,
       "detected_daughters": 3,
       "failures": [],
-      "runtime_s": 0.1037,
-      "python_tracemalloc_peak_mb": 7.18
+      "runtime_s": 0.2606,
+      "python_tracemalloc_peak_mb": 24.37
     },
     {
-      "case": "close_origins",
+      "case": "case_20",
       "passed": true,
-      "detected_daughters": 2,
+      "detected_daughters": 4,
       "failures": [],
-      "runtime_s": 0.0806,
-      "python_tracemalloc_peak_mb": 7.16
+      "runtime_s": 0.5605,
+      "python_tracemalloc_peak_mb": 32.79
     },
     {
-      "case": "common_trunk",
+      "case": "case_21",
       "passed": true,
-      "detected_daughters": 1,
+      "detected_daughters": 3,
       "failures": [],
-      "runtime_s": 0.0921,
-      "python_tracemalloc_peak_mb": 7.17
+      "runtime_s": 0.8634,
+      "python_tracemalloc_peak_mb": 36.69
     },
     {
-      "case": "downstream_branch",
+      "case": "case_22",
       "passed": true,
-      "detected_daughters": 1,
+      "detected_daughters": 6,
       "failures": [],
-      "runtime_s": 0.0863,
-      "python_tracemalloc_peak_mb": 7.17
+      "runtime_s": 1.4512,
+      "python_tracemalloc_peak_mb": 68.38
     },
     {
-      "case": "flat_cap",
+      "case": "case_23",
       "passed": true,
-      "detected_daughters": 0,
+      "detected_daughters": 3,
       "failures": [],
-      "runtime_s": 0.0829,
-      "python_tracemalloc_peak_mb": 6.68
-    },
-    {
-      "case": "empty",
-      "passed": true,
-      "detected_daughters": 0,
-      "failures": [],
-      "runtime_s": 0.0998,
-      "python_tracemalloc_peak_mb": 6.68
+      "runtime_s": 0.5601,
+      "python_tracemalloc_peak_mb": 21.89
     }
   ],
-  "visual_check_count": 3,
   "submission": {
     "checks": {
       "source_code": true,
       "dependency_file": true,
       "readme_with_setup_command": true,
       "readme_with_exact_run_command": true,
-      "development_predictions": false,
+      "development_predictions": true,
       "three_visual_checks": true,
       "five_minute_demo": true,
       "self_tests_pass": true
     },
-    "submission_ready": false,
+    "submission_ready": true,
     "note": "Development predictions require the organizers' development cases; synthetic predictions do not satisfy that submission item."
   },
   "official_run_command": "python run.py --image image.nii.gz --aorta-mask aorta_mask.nii.gz --output prediction.json"

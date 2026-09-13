@@ -1,0 +1,271 @@
+{
+  "methodology": {
+    "matching": "maximum-cardinality, minimum-distance one-to-one",
+    "seed_hit": "nearest native voxel; no dilation",
+    "radius_reference": "radius_mm at seed; null values excluded",
+    "scope": "development cases; spatial annotations retain review uncertainty"
+  },
+  "summary": {
+    "tolerance_mm": 6.0,
+    "tp": 19,
+    "fp": 0,
+    "fn": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "mean_ostium_error_mm": 1.56,
+    "median_ostium_error_mm": 1.06,
+    "mean_direction_cosine": 0.974,
+    "radius_measurement_count": 3,
+    "mean_seed_error_mm": 1.463,
+    "traced_predictions": 17,
+    "unresolved_path_predictions": 2,
+    "mean_radius_error_mm": 0.22,
+    "seed_inside_reference_label": "17/19",
+    "mean_runtime_s": 0.31,
+    "max_runtime_s": 0.58
+  },
+  "cases": [
+    {
+      "case": "case_19",
+      "references": 3,
+      "predictions": 3,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "missed_references": [],
+      "runtime_s": 0.16,
+      "threshold_hu": 297.5,
+      "matched": [
+        {
+          "prediction": "branch_001",
+          "reference": "branch_002",
+          "ostium_distance_mm": 2.62,
+          "direction_cosine": 0.982,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 1.91,
+          "seed_radius_error_mm": null
+        },
+        {
+          "prediction": "branch_002",
+          "reference": "branch_001",
+          "ostium_distance_mm": 1.06,
+          "direction_cosine": 0.983,
+          "seed_inside_reference_label": false,
+          "seed_distance_mm": 1.211,
+          "seed_radius_error_mm": null
+        },
+        {
+          "prediction": "branch_003",
+          "reference": "branch_003",
+          "ostium_distance_mm": 2.68,
+          "direction_cosine": 0.881,
+          "seed_inside_reference_label": false,
+          "seed_distance_mm": 4.585,
+          "seed_radius_error_mm": null
+        }
+      ],
+      "unmatched_predictions": []
+    },
+    {
+      "case": "case_20",
+      "references": 4,
+      "predictions": 4,
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "missed_references": [],
+      "runtime_s": 0.27,
+      "threshold_hu": 242.8,
+      "matched": [
+        {
+          "prediction": "branch_001",
+          "reference": "branch_002",
+          "ostium_distance_mm": 2.52,
+          "direction_cosine": 0.905,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 1.07,
+          "seed_radius_error_mm": null
+        },
+        {
+          "prediction": "branch_002",
+          "reference": "branch_001",
+          "ostium_distance_mm": 2.21,
+          "direction_cosine": 0.99,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 0.842,
+          "seed_radius_error_mm": 0.358
+        },
+        {
+          "prediction": "branch_003",
+          "reference": "branch_003",
+          "ostium_distance_mm": 0.08,
+          "direction_cosine": 0.998,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 0.426,
+          "seed_radius_error_mm": 0.186
+        },
+        {
+          "prediction": "branch_004",
+          "reference": "branch_004",
+          "ostium_distance_mm": 2.33,
+          "direction_cosine": 0.899,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 3.032,
+          "seed_radius_error_mm": null
+        }
+      ],
+      "unmatched_predictions": []
+    },
+    {
+      "case": "case_21",
+      "references": 3,
+      "predictions": 3,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "missed_references": [],
+      "runtime_s": 0.32,
+      "threshold_hu": 289.55,
+      "matched": [
+        {
+          "prediction": "branch_001",
+          "reference": "branch_001",
+          "ostium_distance_mm": 1.52,
+          "direction_cosine": 0.992,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 1.502,
+          "seed_radius_error_mm": null
+        },
+        {
+          "prediction": "branch_002",
+          "reference": "branch_002",
+          "ostium_distance_mm": 1.06,
+          "direction_cosine": 0.952,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 0.854,
+          "seed_radius_error_mm": null
+        },
+        {
+          "prediction": "branch_003",
+          "reference": "branch_003",
+          "ostium_distance_mm": 2.49,
+          "direction_cosine": 0.984,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 2.183,
+          "seed_radius_error_mm": null
+        }
+      ],
+      "unmatched_predictions": []
+    },
+    {
+      "case": "case_22",
+      "references": 6,
+      "predictions": 6,
+      "tp": 6,
+      "fp": 0,
+      "fn": 0,
+      "missed_references": [],
+      "runtime_s": 0.58,
+      "threshold_hu": 128.2,
+      "matched": [
+        {
+          "prediction": "branch_001",
+          "reference": "branch_001",
+          "ostium_distance_mm": 0.9,
+          "direction_cosine": 0.982,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 0.201,
+          "seed_radius_error_mm": null
+        },
+        {
+          "prediction": "branch_002",
+          "reference": "branch_006",
+          "ostium_distance_mm": 0.99,
+          "direction_cosine": 0.995,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 0.712,
+          "seed_radius_error_mm": null
+        },
+        {
+          "prediction": "branch_003",
+          "reference": "branch_002",
+          "ostium_distance_mm": 0.27,
+          "direction_cosine": 0.998,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 0.333,
+          "seed_radius_error_mm": 0.108
+        },
+        {
+          "prediction": "branch_004",
+          "reference": "branch_003",
+          "ostium_distance_mm": 0.9,
+          "direction_cosine": 0.997,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 0.551,
+          "seed_radius_error_mm": null
+        },
+        {
+          "prediction": "branch_005",
+          "reference": "branch_004",
+          "ostium_distance_mm": 0.99,
+          "direction_cosine": 1.0,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 0.858,
+          "seed_radius_error_mm": null
+        },
+        {
+          "prediction": "branch_006",
+          "reference": "branch_005",
+          "ostium_distance_mm": 1.01,
+          "direction_cosine": 0.988,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 0.415,
+          "seed_radius_error_mm": null
+        }
+      ],
+      "unmatched_predictions": []
+    },
+    {
+      "case": "case_23",
+      "references": 3,
+      "predictions": 3,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "missed_references": [],
+      "runtime_s": 0.24,
+      "threshold_hu": 202.0,
+      "matched": [
+        {
+          "prediction": "branch_001",
+          "reference": "branch_002",
+          "ostium_distance_mm": 0.92,
+          "direction_cosine": 0.986,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 0.913,
+          "seed_radius_error_mm": null
+        },
+        {
+          "prediction": "branch_002",
+          "reference": "branch_003",
+          "ostium_distance_mm": 2.55,
+          "direction_cosine": 1.0,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 2.991,
+          "seed_radius_error_mm": null
+        },
+        {
+          "prediction": "branch_003",
+          "reference": "branch_001",
+          "ostium_distance_mm": 2.6,
+          "direction_cosine": 0.995,
+          "seed_inside_reference_label": true,
+          "seed_distance_mm": 3.202,
+          "seed_radius_error_mm": null
+        }
+      ],
+      "unmatched_predictions": []
+    }
+  ]
+}

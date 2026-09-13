@@ -4,3 +4,7 @@ __pycache__/
 .sites-runtime/
 .env
 *.zip
+.DS_Store
+.preds/
+."TORALIS CHALLENGE/"
+."EVAL_SET/"

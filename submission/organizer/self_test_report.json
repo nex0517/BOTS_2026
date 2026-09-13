@@ -1,0 +1,225 @@
+{
+  "mode": "development-data",
+  "passed": true,
+  "case_count": 25,
+  "average_runtime_s": 1.785,
+  "runtime_target_s": 60,
+  "visual_check_count": 3,
+  "cases": [
+    {
+      "case": "subject001",
+      "passed": true,
+      "detected_daughters": 6,
+      "failures": [],
+      "runtime_s": 2.0298,
+      "python_tracemalloc_peak_mb": 169.81
+    },
+    {
+      "case": "subject002",
+      "passed": true,
+      "detected_daughters": 7,
+      "failures": [],
+      "runtime_s": 2.2672,
+      "python_tracemalloc_peak_mb": 255.31
+    },
+    {
+      "case": "subject003",
+      "passed": true,
+      "detected_daughters": 6,
+      "failures": [],
+      "runtime_s": 2.974,
+      "python_tracemalloc_peak_mb": 391.95
+    },
+    {
+      "case": "subject004",
+      "passed": true,
+      "detected_daughters": 6,
+      "failures": [],
+      "runtime_s": 2.231,
+      "python_tracemalloc_peak_mb": 297.07
+    },
+    {
+      "case": "subject005",
+      "passed": true,
+      "detected_daughters": 8,
+      "failures": [],
+      "runtime_s": 1.8526,
+      "python_tracemalloc_peak_mb": 179.54
+    },
+    {
+      "case": "subject006",
+      "passed": true,
+      "detected_daughters": 6,
+      "failures": [],
+      "runtime_s": 2.2585,
+      "python_tracemalloc_peak_mb": 326.23
+    },
+    {
+      "case": "subject007",
+      "passed": true,
+      "detected_daughters": 2,
+      "failures": [],
+      "runtime_s": 0.9189,
+      "python_tracemalloc_peak_mb": 150.54
+    },
+    {
+      "case": "subject008",
+      "passed": true,
+      "detected_daughters": 6,
+      "failures": [],
+      "runtime_s": 2.999,
+      "python_tracemalloc_peak_mb": 482.59
+    },
+    {
+      "case": "subject009",
+      "passed": true,
+      "detected_daughters": 5,
+      "failures": [],
+      "runtime_s": 2.0275,
+      "python_tracemalloc_peak_mb": 211.42
+    },
+    {
+      "case": "subject010",
+      "passed": true,
+      "detected_daughters": 7,
+      "failures": [],
+      "runtime_s": 2.3543,
+      "python_tracemalloc_peak_mb": 279.84
+    },
+    {
+      "case": "subject011",
+      "passed": true,
+      "detected_daughters": 12,
+      "failures": [],
+      "runtime_s": 1.7657,
+      "python_tracemalloc_peak_mb": 178.57
+    },
+    {
+      "case": "subject012",
+      "passed": true,
+      "detected_daughters": 6,
+      "failures": [],
+      "runtime_s": 2.7786,
+      "python_tracemalloc_peak_mb": 232.65
+    },
+    {
+      "case": "subject013",
+      "passed": true,
+      "detected_daughters": 6,
+      "failures": [],
+      "runtime_s": 2.1743,
+      "python_tracemalloc_peak_mb": 177.55
+    },
+    {
+      "case": "subject014",
+      "passed": true,
+      "detected_daughters": 5,
+      "failures": [],
+      "runtime_s": 2.6348,
+      "python_tracemalloc_peak_mb": 256.36
+    },
+    {
+      "case": "subject015",
+      "passed": true,
+      "detected_daughters": 7,
+      "failures": [],
+      "runtime_s": 2.914,
+      "python_tracemalloc_peak_mb": 326.7
+    },
+    {
+      "case": "subject016",
+      "passed": true,
+      "detected_daughters": 7,
+      "failures": [],
+      "runtime_s": 1.3732,
+      "python_tracemalloc_peak_mb": 58.91
+    },
+    {
+      "case": "subject017",
+      "passed": true,
+      "detected_daughters": 1,
+      "failures": [],
+      "runtime_s": 0.2636,
+      "python_tracemalloc_peak_mb": 24.08
+    },
+    {
+      "case": "subject018",
+      "passed": true,
+      "detected_daughters": 11,
+      "failures": [],
+      "runtime_s": 1.9826,
+      "python_tracemalloc_peak_mb": 204.85
+    },
+    {
+      "case": "subject019",
+      "passed": true,
+      "detected_daughters": 3,
+      "failures": [],
+      "runtime_s": 0.26,
+      "python_tracemalloc_peak_mb": 24.31
+    },
+    {
+      "case": "subject020",
+      "passed": true,
+      "detected_daughters": 4,
+      "failures": [],
+      "runtime_s": 0.5604,
+      "python_tracemalloc_peak_mb": 32.76
+    },
+    {
+      "case": "subject021",
+      "passed": true,
+      "detected_daughters": 3,
+      "failures": [],
+      "runtime_s": 0.8642,
+      "python_tracemalloc_peak_mb": 36.66
+    },
+    {
+      "case": "subject022",
+      "passed": true,
+      "detected_daughters": 6,
+      "failures": [],
+      "runtime_s": 1.4561,
+      "python_tracemalloc_peak_mb": 68.37
+    },
+    {
+      "case": "subject023",
+      "passed": true,
+      "detected_daughters": 3,
+      "failures": [],
+      "runtime_s": 0.5647,
+      "python_tracemalloc_peak_mb": 21.89
+    },
+    {
+      "case": "subject024",
+      "passed": true,
+      "detected_daughters": 8,
+      "failures": [],
+      "runtime_s": 0.85,
+      "python_tracemalloc_peak_mb": 49.17
+    },
+    {
+      "case": "subject025",
+      "passed": true,
+      "detected_daughters": 10,
+      "failures": [],
+      "runtime_s": 2.2789,
+      "python_tracemalloc_peak_mb": 197.65
+    }
+  ],
+  "submission": {
+    "checks": {
+      "source_code": true,
+      "dependency_file": true,
+      "readme_with_setup_command": true,
+      "readme_with_exact_run_command": true,
+      "development_predictions": true,
+      "three_visual_checks": true,
+      "five_minute_demo": true,
+      "self_tests_pass": true
+    },
+    "submission_ready": true,
+    "note": "Development predictions require the organizers' development cases; synthetic predictions do not satisfy that submission item."
+  },
+  "official_run_command": "python run.py --image image.nii.gz --aorta-mask aorta_mask.nii.gz --output prediction.json"
+}
