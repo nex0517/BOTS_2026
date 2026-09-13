@@ -77,6 +77,10 @@ python -m unittest discover -s tests -v
 - It keeps strict prediction JSON separate from confidence, visuals and diagnostics.
 - It turns 3D topology into a memorable Aorta Map linked to evidence slices and proximal geometry.
 
+## Real-case TypeScript dashboard
+
+The integrated dashboard in `web/` reads `submission/organizer/development_predictions/` and uses this repository's Python detector for its **Re-run analysis** action. It displays the 25 real organizer cases with axial CT, aorta mask, branch arrows, counts, run times, and exact JSON. Start it with `node web/server.mjs` and open `http://127.0.0.1:3000`. See `web/README.md` for data-root and rebuild instructions.
+
 ## Run the visual MVP
 
 Open `dist/index.html` directly, or serve the folder locally:
