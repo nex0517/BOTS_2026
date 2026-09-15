@@ -10,3 +10,7 @@ TORALIS CHALLENGE/
 EVAL_SET/
 *.nii
 *.nii.gz
+web/public/pitch-data/
+web/node_modules/
+web/verification/
+validation_runs/

@@ -88,7 +88,7 @@ const server=http.createServer(async(req,res)=>{
       else throw Object.assign(new Error('Not found'),{status:404});
       return;
     }
-    const rel=url.pathname==='/'?'index.html':decodeURIComponent(url.pathname.slice(1));
+    const rel=url.pathname==='/'?'pitch.html':decodeURIComponent(url.pathname.slice(1));
     const file=path.resolve(publicDir,rel);
     if(!file.startsWith(publicDir+path.sep)&&file!==path.join(publicDir,'index.html')) throw Object.assign(new Error('Forbidden'),{status:403});
     await sendFile(res,file,mime[path.extname(file)]||'application/octet-stream');
